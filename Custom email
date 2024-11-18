@@ -1,0 +1,493 @@
+# Custom-Email-Sender
+Build the Components
+A. Header.js
+
+
+jsx
+
+import React from 'react';
+
+const Header = () => (
+  <header>
+    <nav className="navbar">
+      <h1>Email Sender Dashboard</h1>
+    </nav>
+  </header>
+);
+
+export default Header;
+B. Dashboard.js
+Main dashboard to display analytics and status:
+
+jsx
+
+import React from 'react';
+import Analytics from './Analytics';
+import EmailForm from './EmailForm';
+
+const Dashboard = () => (
+  <div className="dashboard">
+    <h2>Welcome to the Email Sender Dashboard</h2>
+    <EmailForm />
+    <Analytics />
+  </div>
+);
+
+export default Dashboard;
+C. EmailForm.js
+Form to upload files, customize prompts, and send emails:
+
+jsx
+
+import React, { useState } from 'react';
+
+const EmailForm = () => {
+  const [file, setFile] = useState(null);
+  const [prompt, setPrompt] = useState('');
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log('File:', file);
+    console.log('Prompt:', prompt);
+    // Add API call here
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <label>
+        Upload File:
+        <input type="file" accept=".csv" onChange={handleFileChange} />
+      </label>
+      <label>
+        Email Prompt:
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Enter your email prompt with placeholders (e.g., {Company Name})"
+        />
+      </label>
+      <button type="submit">Send Emails</button>
+    </form>
+  );
+};
+
+export default EmailForm;
+D. Analytics.js
+Display real-time analytics (using dummy data for now):
+
+jsx
+
+import React from 'react';
+import { Bar } from 'react-chartjs-2';
+
+const Analytics = () => {
+  const data = {
+    labels: ['Sent', 'Scheduled', 'Failed', 'Opened'],
+    datasets: [
+      {
+        label: 'Email Stats',
+        data: [200, 50, 5, 120], // Example data
+        backgroundColor: ['#4caf50', '#2196f3', '#f44336', '#ff9800'],
+      },
+    ],
+  };
+
+  return (
+    <div>
+      <h3>Email Analytics</h3>
+      <Bar data={data} />
+    </div>
+  );
+};
+
+export default Analytics;
+4. Set Up API Services
+Create an api.js file in the services folder:
+
+javascript
+
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:5000'; // Update with your backend URL
+
+export const uploadFile = (file, prompt) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('prompt', prompt);
+
+  return axios.post(`${API_BASE_URL}/upload`, formData);
+};
+
+export const getAnalytics = () => {
+  return axios.get(`${API_BASE_URL}/analytics`);
+};
+5. Hook Up API in the Components
+Integrate the API calls in EmailForm.js:
+
+javascript
+
+import { uploadFile } from '../services/api';
+
+// Inside handleSubmit
+uploadFile(file, prompt)
+  .then((response) => {
+    alert('Emails are being processed!');
+  })
+  .catch((error) => {
+    console.error('Error:', error);
+    alert('Failed to send emails.');
+  });
+
+
+1. Backend Integration
+Assuming your backend is set up to handle API requests, here's how to connect it with the frontend.
+
+Backend API Endpoints
+Here’s an example of how the backend endpoints should look:
+
+Upload File and Prompt (POST /upload):
+Accepts a file and a prompt.
+Processes the data and schedules emails.
+Get Analytics (GET /analytics):
+Returns email status metrics (sent, scheduled, failed, opened, etc.).
+A. Update api.js
+Ensure your frontend can interact with these endpoints:
+
+javascript
+
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:5000'; // Replace with your backend URL
+
+export const uploadFile = (file, prompt) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('prompt', prompt);
+
+  return axios.post(`${API_BASE_URL}/upload`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export const getAnalytics = () => axios.get(`${API_BASE_URL}/analytics`);
+B. Integrate Backend in EmailForm.js
+Replace the dummy console.log with the real API call:
+
+javascript
+
+import React, { useState } from 'react';
+import { uploadFile } from '../services/api';
+
+const EmailForm = () => {
+  const [file, setFile] = useState(null);
+  const [prompt, setPrompt] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!file || !prompt) {
+      alert('Please upload a file and enter a prompt.');
+      return;
+    }
+
+    setLoading(true);
+    uploadFile(file, prompt)
+      .then(() => {
+        alert('Emails are being processed!');
+        setFile(null);
+        setPrompt('');
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        alert('Failed to send emails.');
+      })
+      .finally(() => setLoading(false));
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <label>
+        Upload File:
+        <input type="file" accept=".csv" onChange={handleFileChange} />
+      </label>
+      <label>
+        Email Prompt:
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Enter your email prompt with placeholders (e.g., {Company Name})"
+        />
+      </label>
+      <button type="submit" disabled={loading}>
+        {loading ? 'Sending...' : 'Send Emails'}
+      </button>
+    </form>
+  );
+};
+
+export default EmailForm;
+C. Fetch Analytics in Analytics.js
+Update the Analytics.js component to pull data dynamically:
+
+javascript
+
+import React, { useEffect, useState } from 'react';
+import { Bar } from 'react-chartjs-2';
+import { getAnalytics } from '../services/api';
+
+const Analytics = () => {
+  const [data, setData] = useState({
+    labels: [],
+    datasets: [],
+  });
+
+  useEffect(() => {
+    getAnalytics()
+      .then((response) => {
+        const { sent, scheduled, failed, opened } = response.data;
+        setData({
+          labels: ['Sent', 'Scheduled', 'Failed', 'Opened'],
+          datasets: [
+            {
+              label: 'Email Stats',
+              data: [sent, scheduled, failed, opened],
+              backgroundColor: ['#4caf50', '#2196f3', '#f44336', '#ff9800'],
+            },
+          ],
+        });
+      })
+      .catch((error) => console.error('Error fetching analytics:', error));
+  }, []);
+
+  return (
+    <div>
+      <h3>Email Analytics</h3>
+      <Bar data={data} />
+    </div>
+  );
+};
+
+export default Analytics;
+2. Styling the Dashboard
+Add some CSS in App.css for a clean, professional look:
+
+css
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f9f9f9;
+}
+
+header {
+  background-color: #4caf50;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+}
+
+.dashboard {
+  padding: 2rem;
+  margin: auto;
+  max-width: 800px;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+textarea,
+input[type="file"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+button {
+  padding: 0.7rem;
+  border: none;
+  border-radius: 5px;
+  background-color: #4caf50;
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  background-color: #ddd;
+  cursor: not-allowed;
+}
+3. Real-Time Analytics (Optional)
+Use WebSockets or polling for real-time updates:
+
+WebSockets: Establish a connection with your backend to push updates when metrics change.
+Polling: Fetch analytics data at intervals (e.g., every 5 seconds).
+Example polling:
+
+javascript
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    getAnalytics().then((response) => {
+      // Update state
+    });
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, []);
+
+1. Real-Time Analytics with WebSockets
+We’ll use Socket.IO, a popular library for real-time WebSocket communication, for both the backend and frontend.
+
+A. Backend Setup
+Install the necessary library:
+
+bash
+Copy code
+pip install flask flask-socketio
+Modify your backend to support WebSockets:
+
+python
+Copy code
+from flask import Flask, jsonify, request
+from flask_socketio import SocketIO
+from time import sleep
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key'
+socketio = SocketIO(app, cors_allowed_origins="*")  # Enable WebSocket communication
+
+# Simulated analytics data
+analytics_data = {
+    'sent': 200,
+    'scheduled': 50,
+    'failed': 5,
+    'opened': 120,
+}
+
+@app.route('/analytics', methods=['GET'])
+def get_analytics():
+    return jsonify(analytics_data)
+
+# Emit updates to connected clients
+def update_analytics():
+    while True:
+        analytics_data['sent'] += 1  # Simulate emails being sent
+        socketio.emit('analytics_update', analytics_data)
+        sleep(5)  # Update every 5 seconds
+
+# Start background WebSocket updates
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected!')
+
+if __name__ == '__main__':
+    socketio.start_background_task(update_analytics)  # Run updates in the background
+    socketio.run(app, debug=True)
+B. Frontend Integration
+Install Socket.IO for the frontend:
+
+bash
+Copy code
+npm install socket.io-client
+Modify Analytics.js to use WebSockets:
+
+javascript
+Copy code
+import React, { useEffect, useState } from 'react';
+import { Bar } from 'react-chartjs-2';
+import { io } from 'socket.io-client';
+
+const Analytics = () => {
+  const [data, setData] = useState({
+    labels: ['Sent', 'Scheduled', 'Failed', 'Opened'],
+    datasets: [
+      {
+        label: 'Email Stats',
+        data: [0, 0, 0, 0],
+        backgroundColor: ['#4caf50', '#2196f3', '#f44336', '#ff9800'],
+      },
+    ],
+  });
+
+  useEffect(() => {
+    const socket = io('http://localhost:5000'); // Replace with backend URL
+    socket.on('analytics_update', (analytics) => {
+      setData({
+        labels: ['Sent', 'Scheduled', 'Failed', 'Opened'],
+        datasets: [
+          {
+            label: 'Email Stats',
+            data: [
+              analytics.sent,
+              analytics.scheduled,
+              analytics.failed,
+              analytics.opened,
+            ],
+            backgroundColor: ['#4caf50', '#2196f3', '#f44336', '#ff9800'],
+          },
+        ],
+      });
+    });
+
+    return () => socket.disconnect();
+  }, []);
+
+  return (
+    <div>
+      <h3>Email Analytics</h3>
+      <Bar data={data} />
+    </div>
+  );
+};
+
+export default Analytics;
+2. Backend Endpoints for Core Features
+A. File Upload and Email Processing
+Add an endpoint to handle file uploads:
+
+python
+
+from werkzeug.utils import secure_filename
+import os
+
+UPLOAD_FOLDER = './uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['file']
+    prompt = request.form.get('prompt', '')
+
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(file_path)
+
+    # Simulate processing
+    print(f'File saved to {file_path}')
+    print(f'Prompt: {prompt}')
+
+    # Trigger background job to send emails (implement separately)
+    return jsonify({'message': 'File uploaded and emails are being processed.'}), 200
